@@ -5,14 +5,12 @@ import torch
 import torch.nn as nn
 import os
 
-MODEL_NAME = "bert-base-chinese-model.bin"
+
+MODEL_PATH = "/data/workdir/models/bert-base-chinese/"
+
+MODEL_NAME = os.path.join(MODEL_PATH, "pytorch_model.bin")
 CONFIG_NAME = "bert-base-chinese-config.json"
 VOB_NAME = "bert-base-chinese-vocab.txt"
-
-
-
-
-
 
 
 class BertCrf(nn.Module):

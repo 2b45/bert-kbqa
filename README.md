@@ -7,7 +7,7 @@
 下载下来放在./bert-kbqa/input/config目录
 
 
-构造数据集
+## 构造数据集
 通过 1_split_data.py 切分数据
 
 通过 2-construct_dataset_ner.py 构造命名实体识别的数据集
@@ -20,6 +20,7 @@
 
 通过 6-load_dbdata.py 通过创建数据库 和 上传数据
 
+## 模型准备
 
 
 CRF_Model.py  条件随机场模型
@@ -29,7 +30,6 @@ BERT_CRF.py  bert+条件随机场
 NER_main.py  训练命令实体识别的模型
 
 SIM_main.py  训练属性相似度的模型
-
 
 test_NER.py  测试命令实体识别
 
