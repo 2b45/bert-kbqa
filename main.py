@@ -1,8 +1,8 @@
 # coding=utf-8
 import torch
-import torch.nn as nn
+# import torch.nn as nn
 from torch.autograd import Variable
-from config import Config
+from conf.config import Config
 from model import BERT_LSTM_CRF
 import torch.optim as optim
 from utils import load_vocab, read_corpus, load_model, save_model

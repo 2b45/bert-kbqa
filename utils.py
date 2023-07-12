@@ -2,7 +2,7 @@
 import torch
 import os
 import datetime
-import unicodedata
+# import unicodedata
 
 
 class InputFeatures(object):
@@ -74,6 +74,7 @@ def save_model(model, epoch, path='result', **kwargs):
     """
     if not os.path.exists(path):
         os.mkdir(path)
+        
     if kwargs.get('name', None) is None:
         cur_time = datetime.datetime.now().strftime('%Y-%m-%d#%H:%M:%S')
         name = cur_time + '--epoch:{}'.format(epoch)
