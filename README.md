@@ -23,17 +23,6 @@ test_SIM.py 测试属性相似度
 test_pro.py  测试整个项目
 ```
 
-主要依赖版本：
-
-torch.__version__    1.2.0
-
-transformers.__version__   2.0.0
-
-
-带有命令运行的py文件的命令都在 该py文件的最上方
-
-
-
 ## 操作
 
 ```
@@ -65,6 +54,7 @@ transformers.__version__   2.0.0
     --train_batch_size 32   \
     --eval_batch_size 256   \
     --gradient_accumulation_steps 4 \
-    --num_train_epochs 15
+    --num_train_epochs 15 \
+    --output_dir ./data/result 
 
 ```

@@ -1,11 +1,12 @@
 # coding:utf-8 
+import os 
+import torch
 from transformers import BertConfig, BertForSequenceClassification, BertTokenizer
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 from sim_main import SimProcessor,SimInputFeatures,cal_acc
-import torch
 from tqdm import tqdm, trange
 
-from conf.config import VOB_PATH, CONFIG_PATH
+from conf.config import VOB_PATH, CONFIG_PATH, PROJECT_DIR, SIM_BERT_MODEL_PATH
 
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -16,7 +17,7 @@ tokenizer_kwards = {'do_lower_case': False,
                     'vocab_file': VOB_PATH}
 tokenizer = BertTokenizer(*tokenizer_inputs, **tokenizer_kwards)
 
-features = torch.load('./input/data/sim_data/cached_dev_64')
+features = torch.load(os.path.join(PROJECT_DIR, "data/sim_data/cached_dev_64"))
 
 all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
 all_attention_mask = torch.tensor([f.attention_mask for f in features], dtype=torch.long)
@@ -29,7 +30,7 @@ bert_config = BertConfig.from_pretrained(CONFIG_PATH)
 bert_config.num_labels = len(processor.get_labels())
 
 model = BertForSequenceClassification(bert_config)
-model.load_state_dict(torch.load('./output/best_sim.bin'))
+model.load_state_dict(SIM_BERT_MODEL_PATH)
 model = model.to(device)
 
 

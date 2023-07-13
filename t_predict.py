@@ -5,6 +5,10 @@ from transformers import BertTokenizer, BertConfig, BertForSequenceClassificatio
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 import torch
 import pymysql
+
+from conf.config import VOB_PATH, CONFIG_PATH, NER_BERT_MODEL_PATH, SIM_BERT_MODEL_PATH 
+
+
 # from tqdm import tqdm, trange
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -171,7 +175,7 @@ def select_database(sql):
 
 
 # 文字直接匹配，看看属性的词语在不在句子之中
-def text_match(attribute_list,answer_list,sentence):
+def text_match(attribute_list, answer_list, sentence):
 
     assert len(attribute_list) == len(answer_list)
 
@@ -183,29 +187,28 @@ def text_match(attribute_list,answer_list,sentence):
     if -1 != idx:
         return attribute_list[idx],answer_list[idx]
     else:
-        return "",""
-
+        return "", ""
 
 
 def main():
-
     with torch.no_grad():
         tokenizer_inputs = ()
         tokenizer_kwards = {'do_lower_case': False,
                             'max_len': 64,
-                            'vocab_file': './input/config/bert-base-chinese-vocab.txt'}
+                            'vocab_file': VOB_PATH}
         ner_processor = NerProcessor()
         sim_processor = SimProcessor()
         tokenizer = BertTokenizer(*tokenizer_inputs, **tokenizer_kwards)
 
 
-        ner_model = get_ner_model(config_file = './input/config/bert-base-chinese-config.json',
-                                  pre_train_model = './output/best_ner.bin',label_num = len(ner_processor.get_labels()))
+        ner_model = get_ner_model(config_file=CONFIG_PATH,
+                                  pre_train_model=NER_BERT_MODEL_PATH, 
+                                  label_num = len(ner_processor.get_labels()))
         ner_model = ner_model.to(device)
         ner_model.eval()
 
-        sim_model = get_sim_model(config_file='./input/config/bert-base-chinese-config.json',
-                                  pre_train_model='./output/best_sim.bin',
+        sim_model = get_sim_model(config_file=CONFIG_PATH,
+                                  pre_train_model=SIM_BERT_MODEL_PATH,
                                   label_num=len(sim_processor.get_labels()))
 
         sim_model = sim_model.to(device)
@@ -237,8 +240,8 @@ def main():
             if attribute != '' and answer != '':
                 ret = "{}的{}是{}".format(entity, attribute, answer)
             else:
-                sim_model = get_sim_model(config_file='./input/config/bert-base-chinese-config.json',
-                                          pre_train_model='./output/best_sim.bin',
+                sim_model = get_sim_model(config_file=CONFIG_PATH,
+                                          pre_train_model=SIM_BERT_MODEL_PATH,
                                           label_num=len(sim_processor.get_labels()))
 
                 sim_model = sim_model.to(device)
@@ -253,7 +256,7 @@ def main():
             if '' == ret:
                 print("未找到{}相关信息".format(entity))
             else:
-                print("回答:",ret)
+                print("回答:", ret)
 
 
 if __name__ == '__main__':
