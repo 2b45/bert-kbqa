@@ -1,13 +1,11 @@
-from BERT_CRF import BertCrf
-from NER_main import NerProcessor, CRF_LABELS
-from SIM_main import SimProcessor,SimInputFeatures
+from model.bert_crf import BertCrf
+from ner_main import NerProcessor, CRF_LABELS
+from sim_main import SimProcessor,SimInputFeatures
 from transformers import BertTokenizer, BertConfig, BertForSequenceClassification
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 import torch
 import pymysql
-from tqdm import tqdm, trange
-
-
+# from tqdm import tqdm, trange
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
@@ -87,9 +85,7 @@ def get_entity(model,tokenizer,sentence,max_len = 64):
 
 
 def semantic_matching(model,tokenizer,question,attribute_list,answer_list,max_length):
-
     assert len(attribute_list) == len(answer_list)
-
     pad_token = 0
     pad_token_segment_id = 1
     features = []
@@ -127,13 +123,13 @@ def semantic_matching(model,tokenizer,question,attribute_list,answer_list,max_le
 
     dataset = TensorDataset(all_input_ids, all_attention_mask, all_token_type_ids)
     sampler = SequentialSampler(dataset)
-    dataloader = DataLoader(dataset, sampler=sampler,batch_size=128)
+    dataloader = DataLoader(dataset, sampler=sampler, batch_size=128)
 
     data_num = all_attention_mask.shape[0]
     batch_size = 128
 
     all_logits = None
-    for i in range(0,data_num,batch_size):
+    for i in range(0, data_num, batch_size):
         model.eval()
         with torch.no_grad():
             inputs = {'input_ids': all_input_ids[i:i+batch_size].to(device),
@@ -258,6 +254,7 @@ def main():
                 print("未找到{}相关信息".format(entity))
             else:
                 print("回答:",ret)
+
 
 if __name__ == '__main__':
     main()

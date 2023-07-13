@@ -1,15 +1,19 @@
+# coding:utf-8 
 from transformers import BertConfig, BertForSequenceClassification, BertTokenizer
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
-from SIM_main import SimProcessor,SimInputFeatures,cal_acc
+from sim_main import SimProcessor,SimInputFeatures,cal_acc
 import torch
 from tqdm import tqdm, trange
+
+from conf.config import VOB_PATH, CONFIG_PATH
+
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 processor = SimProcessor()
 tokenizer_inputs = ()
 tokenizer_kwards = {'do_lower_case': False,
                     'max_len': 64,
-                    'vocab_file': './input/config/bert-base-chinese-vocab.txt'}
+                    'vocab_file': VOB_PATH}
 tokenizer = BertTokenizer(*tokenizer_inputs, **tokenizer_kwards)
 
 features = torch.load('./input/data/sim_data/cached_dev_64')
@@ -21,7 +25,7 @@ all_label = torch.tensor([f.label for f in features], dtype=torch.long)
 test_dataset = TensorDataset(all_input_ids, all_attention_mask, all_token_type_ids, all_label)
 
 
-bert_config = BertConfig.from_pretrained('./input/config/bert-base-chinese-config.json')
+bert_config = BertConfig.from_pretrained(CONFIG_PATH)
 bert_config.num_labels = len(processor.get_labels())
 
 model = BertForSequenceClassification(bert_config)

@@ -1,25 +1,4 @@
-# --data_dir
-# ./input/data/ner_data
-# --vob_file
-# ./input/config/bert-base-chinese-vocab.txt
-# --model_config
-# ./input/config/bert-base-chinese-config.json
-# --output
-# ./output
-# --pre_train_model
-# ./input/config/bert-base-chinese-model.bin
-# --max_seq_length
-# 64
-# --do_train
-# --train_batch_size
-# 32
-# --eval_batch_size
-# 256
-# --gradient_accumulation_steps
-# 4
-# --num_train_epochs
-# 15
-
+# coding:utf-8 
 
 import argparse
 import logging
@@ -33,9 +12,11 @@ from tqdm import tqdm, trange
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 from transformers import BertForSequenceClassification,BertTokenizer,BertConfig
 from transformers.data.processors.utils import DataProcessor, InputExample
-from BERT_CRF import BertCrf
-from transformers import AdamW, WarmupLinearSchedule
+from model.bert_crf import BertCrf
+from transformers import AdamW, get_linear_schedule_with_warmup
 from sklearn.metrics import classification_report
+
+from conf.config import VOB_PATH, CONFIG_PATH
 
 logger = logging.getLogger(__name__)
 #
@@ -110,7 +91,7 @@ def crf_convert_examples_to_features(examples,tokenizer,
             example.text,
             add_special_tokens=True,
             max_length=max_length,
-            truncate_first_sequence=True  # We're truncating the first sequence in priority if True
+            # truncate_first_sequence=True  # We're truncating the first sequence in priority if True
         )
         input_ids, token_type_ids = inputs["input_ids"], inputs["token_type_ids"]
         attention_mask = [1 if mask_padding_with_zero else 0] * len(input_ids)
@@ -124,12 +105,9 @@ def crf_convert_examples_to_features(examples,tokenizer,
         # 第一个和第二个[0] 加的是[CLS]和[SEP]的位置,  [0]*padding_length是[pad] ，把这些都暂时算作"O"，后面用mask 来消除这些，不会影响
         labels_ids = [0] + [label_map[l] for l in example.label] + [0] + [0]*padding_length
 
-
-
         assert len(input_ids) == max_length, "Error with input length {} vs {}".format(len(input_ids), max_length)
         assert len(attention_mask) == max_length, "Error with input length {} vs {}".format(len(attention_mask),max_length)
         assert len(token_type_ids) == max_length, "Error with input length {} vs {}".format(len(token_type_ids),max_length)
-
         assert len(labels_ids) == max_length, "Error with input length {} vs {}".format(len(labels_ids),max_length)
 
 
@@ -239,9 +217,10 @@ def trains(args,train_dataset,eval_dataset,model):
          'weight_decay': args.weight_decay},
         {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
-    optimizer = AdamW(optimizer_grouped_parameters,lr=args.learning_rate,eps=args.adam_epsilon)
+    optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
 
-    scheduler = WarmupLinearSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=t_total)
+    # scheduler = WarmupLinearSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=t_total)
+    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps, num_training_steps = t_total)
     logger.info("***** Running training *****")
     logger.info("  Num examples = %d", len(train_dataset))
     logger.info("  Num Epochs = %d", args.num_train_epochs)
@@ -265,7 +244,7 @@ def trains(args,train_dataset,eval_dataset,model):
                       'decode':True
             }
             outputs = model(**inputs)
-            loss,pre_tag = outputs[0], outputs[1]
+            loss, pre_tag = outputs[0], outputs[1]
 
             if args.gradient_accumulation_steps > 1:
                 loss = loss / args.gradient_accumulation_steps
@@ -285,15 +264,13 @@ def trains(args,train_dataset,eval_dataset,model):
                 # if (global_step < 100 and global_step % 10 == 0) or (global_step % 50 == 0):
                 # 每 相隔 100步，评估一次
                 if global_step % 100 == 0:
-                    best_f1 = evaluate_and_save_model(args,model,eval_dataset,_,global_step,best_f1)
+                    best_f1 = evaluate_and_save_model(args, model, eval_dataset, _,global_step,best_f1)
 
     # 最后循环结束 再评估一次
-    best_f1 = evaluate_and_save_model(args, model, eval_dataset,_,global_step, best_f1)
+    best_f1 = evaluate_and_save_model(args, model, eval_dataset, _,global_step, best_f1)
 
 
-
-
-def evaluate_and_save_model(args,model,eval_dataset,epoch,global_step,best_f1):
+def evaluate_and_save_model(args, model, eval_dataset, epoch, global_step, best_f1):
     ret = evaluate(args, model, eval_dataset)
 
     precision_b = ret['1']['precision']
@@ -313,9 +290,10 @@ def evaluate_and_save_model(args,model,eval_dataset,epoch,global_step,best_f1):
     avg_recall = recall_b * weight_b + recall_i * weight_i
     avg_f1 = f1_b * weight_b + f1_i * weight_i
 
-    all_avg_precision = ret['micro avg']['precision']
-    all_avg_recall = ret['micro avg']['recall']
-    all_avg_f1 = ret['micro avg']['f1-score']
+    # TODO change micro to macro 
+    all_avg_precision = ret['macro avg']['precision']
+    all_avg_recall = ret['macro avg']['recall']
+    all_avg_f1 = ret['macro avg']['f1-score']
 
     logger.info("Evaluating EPOCH = [%d/%d] global_step = %d", epoch+1,args.num_train_epochs,global_step)
     logger.info("B-LOC precision = %f recall = %f  f1 = %f support = %d", precision_b, recall_b, f1_b,
@@ -331,18 +309,14 @@ def evaluate_and_save_model(args,model,eval_dataset,epoch,global_step,best_f1):
     if avg_f1 > best_f1:
         best_f1 = avg_f1
         torch.save(model.state_dict(), os.path.join(args.output_dir, "best_ner.bin"))
-        logging.info("save the best model %s,avg_f1= %f", os.path.join(args.output_dir, "best_bert.bin"),
-                     best_f1)
-    # 返回出去，用于更新外面的 最佳值
+        logging.info("save the best model %s,avg_f1= %f", os.path.join(args.output_dir, "best_bert.bin"), best_f1)
+        return best_f1
+    # print(best_f1)
+    # 返回出去，用于更新外面的 最佳值   
     return best_f1
 
 
-
-
-
-
 def evaluate(args, model, eval_dataset):
-
     eval_output_dirs = args.output_dir
     if not os.path.exists(eval_output_dirs):
         os.makedirs(eval_output_dirs)
@@ -353,8 +327,6 @@ def evaluate(args, model, eval_dataset):
     logger.info("***** Running evaluation *****")
     logger.info("  Num examples = %d", len(eval_dataset))
     logger.info("  Batch size = %d", args.eval_batch_size)
-
-
     loss = []
     real_token_label = []
     pred_token_label = []
@@ -388,21 +360,17 @@ def evaluate(args, model, eval_dataset):
     return ret
 
 
-
-
-
-
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", default=None, type=str, required=True,
-                        help="数据文件目录，因当有train.txt dev.txt")
+    parser.add_argument("--data_dir", default="./data/ner_data", type=str, required=True,
+                        help="数据文件目录，因当有 train.txt dev.txt")
 
-    parser.add_argument("--vob_file", default=None, type=str, required=True,
+    parser.add_argument("--vob_file", default=VOB_PATH, type=str, required=True,
                         help="词表文件")
 
-    parser.add_argument("--model_config", default=None, type=str, required=True,
+    parser.add_argument("--model_config", default=CONFIG_PATH, type=str, required=True,
                         help="模型配置文件json文件")
-    parser.add_argument("--output_dir", default=None, type=str, required=True,
+    parser.add_argument("--output_dir", default="./data/result/", type=str, required=True,
                         help="输出结果的文件")
 
     # Other parameters
@@ -411,8 +379,7 @@ def main():
 
     parser.add_argument("--max_seq_length", default=128, type=int,
                         help="输入到bert的最大长度，通常不应该超过512")
-    parser.add_argument("--do_train", action='store_true',
-                        help="是否进行训练")
+    parser.add_argument("--do_train", action='store_true', default=True, help="是否进行训练")
     parser.add_argument("--train_batch_size", default=8, type=int,
                         help="训练集的batch_size")
     parser.add_argument("--eval_batch_size", default=8, type=int,
@@ -458,11 +425,10 @@ def main():
 
     train_dataset = load_and_cache_example(args,tokenizer,processor,'train')
     eval_dataset = load_and_cache_example(args,tokenizer,processor,'dev')
-    test_dataset = load_and_cache_example(args, tokenizer, processor, 'test')
+    # test_dataset = load_and_cache_example(args, tokenizer, processor, 'test')
 
     if args.do_train:
-        trains(args,train_dataset,eval_dataset,model)
-
+        trains(args, train_dataset, eval_dataset,model)
 
 
 if __name__ == '__main__':

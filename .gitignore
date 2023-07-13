@@ -1,0 +1,7 @@
+__pycache__
+**/__pycache__
+
+/data
+!/data/NLPCC2016KBQA/nlpcc-iccpol-2016.kbqa.testing-data
+!/data/NLPCC2016KBQA/nlpcc-iccpol-2016.kbqa.train-data
+!/data/*.py

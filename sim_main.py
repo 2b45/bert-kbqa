@@ -1,25 +1,4 @@
-# --data_dir
-# ./input/data/sim_data
-# --vob_file
-# ./input/config/bert-base-chinese-vocab.txt
-# --model_config
-# ./input/config/bert-base-chinese-config.json
-# --output
-# ./output
-# --pre_train_model
-# ./input/config/bert-base-chinese-model.bin
-# --max_seq_length
-# 64
-# --do_train
-# --train_batch_size
-# 32
-# --eval_batch_size
-# 256
-# --gradient_accumulation_steps
-# 4
-# --num_train_epochs
-# 15
-
+# coding:utf-8 
 import argparse
 from collections import Counter
 import code
@@ -33,7 +12,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 
-from transformers import AdamW, WarmupLinearSchedule
+from transformers import AdamW, get_linear_schedule_with_warmup
 from transformers import BertConfig, BertForSequenceClassification, BertTokenizer
 from transformers import glue_convert_examples_to_features as convert_examples_to_features
 from transformers.data.processors.utils import DataProcessor, InputExample
@@ -42,7 +21,6 @@ import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
-
 
 
 def set_seed(args):
@@ -73,9 +51,6 @@ def cal_acc(real_label,pred_label):
     return question_acc.item(),label_acc.item()
     # 测试用的
     # return ((real_label.argmax(dim=-1) == 0).sum() / real_label.shape[0]).item()
-
-
-
 
 
 class SimInputExample(object):
@@ -230,7 +205,8 @@ def trains(args,train_dataset,eval_dataset,model):
     ]
     optimizer = AdamW(optimizer_grouped_parameters,lr=args.learning_rate,eps=args.adam_epsilon)
 
-    scheduler = WarmupLinearSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=t_total)
+    # scheduler = WarmupLinearSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=t_total)
+    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=t_total)
     logger.info("***** Running training *****")
     logger.info("  Num examples = %d", len(train_dataset))
     logger.info("  Num Epochs = %d", args.num_train_epochs)

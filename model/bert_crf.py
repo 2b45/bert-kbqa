@@ -1,16 +1,9 @@
 from typing import List, Optional
 from transformers import BertForTokenClassification,BertTokenizer,BertConfig
-from CRF_Model import CRF
+from model.crf import CRF
 import torch
 import torch.nn as nn
 import os
-
-
-MODEL_PATH = "/data/workdir/models/bert-base-chinese/"
-
-MODEL_NAME = os.path.join(MODEL_PATH, "pytorch_model.bin")
-CONFIG_NAME = "bert-base-chinese-config.json"
-VOB_NAME = "bert-base-chinese-vocab.txt"
 
 
 class BertCrf(nn.Module):
@@ -53,8 +46,7 @@ class BertCrf(nn.Module):
         else:
             self.bertModel = BertForTokenClassification(self.bert_config)
 
-        self.crf_model = CRF(num_tags=num_tags,batch_first=batch_first)
-
+        self.crf_model = CRF(num_tags=num_tags, batch_first=batch_first)
 
 
     def forward(self,input_ids:torch.Tensor,
@@ -69,7 +61,6 @@ class BertCrf(nn.Module):
         # 这里在seq_len的维度上去头，是去掉了[CLS]，去尾巴有两种情况
         # 1、是 <pad> 2、[SEP]
 
-
         new_emissions = emissions[:,1:-1]
         new_mask = attention_mask[:,2:].bool()
 
@@ -80,8 +71,6 @@ class BertCrf(nn.Module):
         else:
             new_tags = tags[:, 1:-1]
             loss = self.crf_model(emissions=new_emissions, tags=new_tags, mask=new_mask, reduction=reduction)
-
-
 
         if decode:
             tag_list = self.crf_model.decode(emissions = new_emissions,mask = new_mask)

@@ -1,24 +1,23 @@
-from BERT_CRF import BertCrf
+from model.bert_crf import BertCrf
 from transformers import BertTokenizer
-from NER_main import NerProcessor,statistical_real_sentences,flatten,CrfInputFeatures
+from ner_main import NerProcessor,statistical_real_sentences,flatten,CrfInputFeatures
 from torch.utils.data import DataLoader, RandomSampler,TensorDataset
 from sklearn.metrics import classification_report
 import torch
 import numpy as np
 from tqdm import tqdm, trange
 
-
-
+from conf.config import MODEL_NAME, VOB_PATH, CONFIG_PATH
 
 
 processor = NerProcessor()
 tokenizer_inputs = ()
 tokenizer_kwards = {'do_lower_case': False,
                     'max_len': 64,
-                    'vocab_file': './input/config/bert-base-chinese-vocab.txt'}
+                    'vocab_file': VOB_PATH}
 tokenizer = BertTokenizer(*tokenizer_inputs,**tokenizer_kwards)
 
-model = BertCrf(config_name= './input/config/bert-base-chinese-config.json',
+model = BertCrf(config_name= CONFIG_PATH,
                 num_tags = len(processor.get_labels()),batch_first=True)
 model.load_state_dict(torch.load('./output/best_ner.bin'))
 
