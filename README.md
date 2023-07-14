@@ -1,6 +1,8 @@
 # bert-kbqa
 - https://github.com/2b45/bert-kbqa/blob/pytorch/model/bert_lstm_crf.py
 
+## 复现环境
+- python3.10 + torch + pandas 
 
 ## 构造数据集
 
@@ -11,17 +13,30 @@
 > 通过 5-triple_clean.py 构造干净的三元组
 > 通过 6-load_dbdata.py 通过创建数据库 和 上传数据
 
-## 模型准备
+```bash
+python3 ./data_prepare/p1_split_data.py 
+python3 ./data_prepare/p2_construct_dataset_ner.py
+python3 ./data_prepare/p3_construct_dataset_attribute.py
+python3 ./data_prepare/p4_print_seq_len.py
+python3 ./data_prepare/p5_triple_clean.py
+python3 ./data_prepare/p6_load_dbdata.py              
+                  
+```
 
-```
-CRF_Model.py  条件随机场模型
-BERT_CRF.py  bert+条件随机场
-NER_main.py  训练命令实体识别的模型
-SIM_main.py  训练属性相似度的模型
-test_NER.py  测试命令实体识别
-test_SIM.py 测试属性相似度
-test_pro.py  测试整个项目
-```
+## 模型准备
+- [CRF](./model/crf.py) 条件随机场模型
+- [BERT-CRF](./model/bert_crf.py)   bert+条件随机场
+
+
+- [ner_main.py](./ner_main.py)  训练命令实体识别的模型
+- [sim_main.py](./sim_main.py)  训练属性相似度的模型
+- [t_predict.py](./t_predict.py)  测试整个项目
+
+
+## 模型效果测试 
+
+- [test_NER](./test_NER.py) 测试命令实体识别
+- [test_SIM](./test_SIM.py)  测试属性相似度
 
 ## 操作
 

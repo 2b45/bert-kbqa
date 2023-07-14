@@ -1,12 +1,14 @@
+# coding:utf-8 
 from model.bert_crf import BertCrf
 from ner_main import NerProcessor, CRF_LABELS
 from sim_main import SimProcessor,SimInputFeatures
 from transformers import BertTokenizer, BertConfig, BertForSequenceClassification
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 import torch
-import pymysql
+# import pymysql
+import pandas as pd 
 
-from conf.config import VOB_PATH, CONFIG_PATH, NER_BERT_MODEL_PATH, SIM_BERT_MODEL_PATH 
+from conf.config import VOB_PATH, CONFIG_PATH, NER_BERT_MODEL_PATH, SIM_BERT_MODEL_PATH, TRIPLE_DIR
 
 
 # from tqdm import tqdm, trange
@@ -35,7 +37,7 @@ def get_entity(model,tokenizer,sentence,max_len = 64):
         text,
         add_special_tokens=True,
         max_length=max_len,
-        truncate_first_sequence=True  # We're truncating the first sequence in priority if True
+        # truncate_first_sequence=True  # We're truncating the first sequence in priority if True
     )
     input_ids, token_type_ids = inputs["input_ids"], inputs["token_type_ids"]
     attention_mask = [1] * len(input_ids)
@@ -156,22 +158,25 @@ def semantic_matching(model,tokenizer,question,attribute_list,answer_list,max_le
         return pre_rest.argmax(dim = -1)
 
 
-def select_database(sql):
-    # connect database
-    connect = pymysql.connect(user="root",password="123456",host="127.0.0.1",port=3306,db="kb_qa",charset="utf8")
-    cursor = connect.cursor()  # 创建操作游标
-    try:
-        # 执行SQL语句
-        cursor.execute(sql)
-        # 获取所有记录列表
-        results = cursor.fetchall()
-    except Exception as e:
-        print("Error: unable to fecth data: %s ,%s" % (repr(e), sql))
-    finally:
-        # 关闭数据库连接
-        cursor.close()
-        connect.close()
-    return results
+# def select_database(sql):
+#     # connect database
+#     connect = pymysql.connect(user="root",password="123456",host="127.0.0.1",port=3306,db="kb_qa",charset="utf8")
+#     cursor = connect.cursor()  # 创建操作游标
+#     try:
+#         # 执行SQL语句
+#         cursor.execute(sql)
+#         # 获取所有记录列表
+#         results = cursor.fetchall()
+#     except Exception as e:
+#         print("Error: unable to fecth data: %s ,%s" % (repr(e), sql))
+#     finally:
+#         # 关闭数据库连接
+#         cursor.close()
+#         connect.close()
+#     return results
+def get_triple_list():
+    df = pd.read_csv(TRIPLE_DIR, sep=',', encoding='utf-8')
+    return df.values 
 
 
 # 文字直接匹配，看看属性的词语在不在句子之中
@@ -191,6 +196,9 @@ def text_match(attribute_list, answer_list, sentence):
 
 
 def main():
+
+    triple_list = get_triple_list() 
+
     with torch.no_grad():
         tokenizer_inputs = ()
         tokenizer_kwards = {'do_lower_case': False,
@@ -226,8 +234,9 @@ def main():
             if '' == entity:
                 print("未发现实体")
                 continue
-            sql_str = "select * from nlpccqa where entity = '{}'".format(entity)
-            triple_list = select_database(sql_str)
+            # sql_str = "select * from nlpccqa where entity = '{}'".format(entity)
+            # triple_list = select_database(sql_str)
+
             triple_list = list(triple_list)
             if 0 == len(triple_list):
                 print("未找到 {} 相关信息".format(entity))
@@ -261,6 +270,8 @@ def main():
 
 if __name__ == '__main__':
     main()
+    # get_triple_list() 
+
 
 
 

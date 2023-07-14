@@ -1,4 +1,5 @@
-from model.bert_crf import BertCrf
+# coding:utf-8 
+import os 
 from transformers import BertTokenizer
 from ner_main import NerProcessor,statistical_real_sentences,flatten,CrfInputFeatures
 from torch.utils.data import DataLoader, RandomSampler,TensorDataset
@@ -7,25 +8,27 @@ import torch
 import numpy as np
 from tqdm import tqdm, trange
 
-from conf.config import MODEL_NAME, VOB_PATH, CONFIG_PATH
+from model.bert_crf import BertCrf
+from conf.config import MODEL_NAME, VOB_PATH, CONFIG_PATH, NER_BERT_MODEL_PATH, PROJECT_DIR
 
 
 processor = NerProcessor()
 tokenizer_inputs = ()
 tokenizer_kwards = {'do_lower_case': False,
                     'max_len': 64,
-                    'vocab_file': VOB_PATH}
-tokenizer = BertTokenizer(*tokenizer_inputs,**tokenizer_kwards)
+                    'vocab_file': VOB_PATH
+                    }
+tokenizer = BertTokenizer(*tokenizer_inputs, **tokenizer_kwards)
 
 model = BertCrf(config_name= CONFIG_PATH,
                 num_tags = len(processor.get_labels()),batch_first=True)
-model.load_state_dict(torch.load('./output/best_ner.bin'))
+model.load_state_dict(torch.load(NER_BERT_MODEL_PATH))
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
 
 # features = torch.load(cached_features_file)
-features = torch.load('./input/data/ner_data/cached_dev_64')
+features = torch.load(os.path.join(PROJECT_DIR, "data/ner_data/cached_dev_64"))
 
 all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
 all_attention_mask = torch.tensor([f.attention_mask for f in features], dtype=torch.long)
@@ -64,7 +67,7 @@ loss = np.array(loss).mean()
 real_token_label = np.array(flatten(real_token_label))
 pred_token_label = np.array(flatten(pred_token_label))
 assert real_token_label.shape == pred_token_label.shape
-ret = classification_report(y_true=real_token_label, y_pred=pred_token_label, digits = 6,output_dict=False)
+ret = classification_report(y_true=real_token_label, y_pred=pred_token_label, digits=6, output_dict=False)
 
 print(ret)
 

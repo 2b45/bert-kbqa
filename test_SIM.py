@@ -30,7 +30,7 @@ bert_config = BertConfig.from_pretrained(CONFIG_PATH)
 bert_config.num_labels = len(processor.get_labels())
 
 model = BertForSequenceClassification(bert_config)
-model.load_state_dict(SIM_BERT_MODEL_PATH)
+model.load_state_dict(torch.load(SIM_BERT_MODEL_PATH))
 model = model.to(device)
 
 
